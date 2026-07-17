@@ -49,7 +49,7 @@ Instead of replacing biomechanical simulations, the proposed approach learns the
 # System Overview
 
 <p align="center">
-  <img src="media/images/system_overview.png" width="900"/>
+  <img src="media/images/system_overview.png" width="300"/>
 </p>
 
 The proposed framework follows a modular pipeline consisting of data acquisition, biomechanical simulation, deep learning, and uncertainty estimation.
