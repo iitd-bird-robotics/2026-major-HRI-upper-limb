@@ -197,7 +197,7 @@ Residual-HRI-Modeling/
 
 <div align="center">
 
-[![Demo Video](media/thumbnails/demo_thumbnail.png)](https://youtube.com/your-link)
+[![Demo Video](simulation/simulation_video.mp4)](simulation/simulation_video.mp4)
 
 **Click the image above to watch the demonstration**
 
