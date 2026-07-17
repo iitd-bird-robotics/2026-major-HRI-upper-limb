@@ -135,6 +135,14 @@ These outputs are synchronized with experimentally recorded EMG signals to creat
 
 ---
 
+
+## Simulation Preview
+
+<p align="center">
+  <img src="media/video/simulation.gif" width="850">
+</p>
+
+
 ## Notes
 
 This directory contains only the simulation assets and outputs. Experimental data acquisition, preprocessing, and deep learning models are organized in their respective directories within the repository.
