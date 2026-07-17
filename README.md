@@ -49,7 +49,7 @@ Instead of replacing biomechanical simulations, the proposed approach learns the
 # System Overview
 
 <p align="center">
-  <img src="media/images/system_overview.svg" width="900"/>
+  <img src="media/images/system_overview.png" width="900"/>
 </p>
 
 The proposed framework follows a modular pipeline consisting of data acquisition, biomechanical simulation, deep learning, and uncertainty estimation.
@@ -159,7 +159,7 @@ using Monte Carlo Dropout to improve prediction reliability for safety-critical 
 # Results
 
 <p align="center">
-  <img src="media/images/results.svg" width="800"/>
+  <img src="media/images/results.png" width="800"/>
 </p>
 
 The proposed framework demonstrates strong agreement between simulated and experimentally measured muscle activations.
