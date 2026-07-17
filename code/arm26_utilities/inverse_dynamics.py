@@ -1,0 +1,104 @@
+# import opensim as osim
+# def IDSolver(ID_model, ID_state, main_model, state, e_angle, s_angle, timed, i):
+    
+#     ID = osim.InverseDynamicsSolver(ID_model)
+    
+#     s_speed = (s_angle[i+1]-s_angle[i])/timed                                          # calculating speed of shoulder joint
+#     s_alpha = ((s_angle[i+1]+s_angle[i-1])-2*s_angle[i])/(timed**2)                    # calculating acceleration of shoulder joint
+#     e_speed =(e_angle[i+1]-e_angle[i])/timed                                           # calculating speed of elbow joint
+#     e_alpha = ((e_angle[i+1]+e_angle[i-1])-2*e_angle[i])/(timed**2)                    # calculating acceleration of elbow joint
+#     elb_accel_ref=e_alpha
+ 
+#     angle_from_sensor = main_model.getCoordinateSet().get('r_elbow_flex').getValue(state)                  # Get current elbow angle value from the state
+#     velocity_from_sensor = main_model.getCoordinateSet().get('r_elbow_flex').getSpeedValue(state)          # Get current elbow speed value from state
+#     angle_from_sensor2 = main_model.getCoordinateSet().get('r_shoulder_elev').getValue(state)              # Get current elbow angle value from the state
+#     velocity_from_sensor2 = main_model.getCoordinateSet().get('r_shoulder_elev').getSpeedValue(state)      # Get current elbow speed value from state
+    
+#     #Putting the angle and velocity values into the current state of the model
+#     ID_model.getCoordinateSet().get('r_elbow_flex').setValue(ID_state, angle_from_sensor)               # Setting the current angle from FD model of elbow joint to the Inverse Dynamics model
+#     ID_model.getCoordinateSet().get('r_elbow_flex').setSpeedValue(ID_state, velocity_from_sensor)       # Setting the current velocity from FD model of elbow joint to the Inverse Dynamics model
+#     ID_model.getCoordinateSet().get('r_shoulder_elev').setValue(ID_state, angle_from_sensor2)           # Setting the current angle from FD model of shoulder joint to the Inverse Dynamics model
+#     ID_model.getCoordinateSet().get('r_shoulder_elev').setSpeedValue(ID_state, velocity_from_sensor2)   # Setting the current velocity from FD model of shoulder joint to the Inverse Dynamics model
+
+#     kp=900
+#     kv=60
+    
+#     # Error_tau = kp(delta.theta) + kv*(delta.theta.dot)
+#     elbow_error_acc= kp*(e_angle[i]-angle_from_sensor) + kv*(e_speed-velocity_from_sensor)
+#     shoulder_error_acc = kp*(s_angle[i]-angle_from_sensor2) + kv*(s_speed-velocity_from_sensor2)
+#     e_alpha = e_alpha + elbow_error_acc 
+#     elb_accel_new=e_alpha                                                               # Acceleration = desired_Acceleration + kp(delta.theta) + kv*(delta.theta.dot)
+#     s_alpha = s_alpha + shoulder_error_acc
+    
+#     #Making a two dimensioanl vector to contain two values : shoulder and elbow acceleration.
+#     u_dot = osim.Vector(2,0)                                                            #Making a vector with two elements
+#     u_dot.set(0, float(s_alpha))  # Shoulder acceleration                                                              # Putting the calculated value of shoulder acceleration at the first position of the vector
+#     u_dot.set(1, float(e_alpha))                                                               # Putting the calculated value of elbow acceleration at the second position of the vector
+                                                              
+    
+#     #Providing the inverse dynamics solver with the state and the joint acceleration vector to get joint torque vector
+#     tau = ID.solve(ID_state, u_dot)
+ 
+#     # Getting individual joint torques from the torque vector
+#     shoulder_tau=(tau.get(0))                                                          # First element of the "tau" vector gives the value of shoulder torque
+#     elbow_tau=(tau.get(1))                                                             # Second element of the "tau" vector gives the value of elbow torque
+    
+#     return[shoulder_tau, elbow_tau,elb_accel_new,elb_accel_ref];
+
+import opensim as osim
+
+def IDSolver(ID_model, ID_state, main_model, state, e_angle, s_angle, timed, i):
+    ID = osim.InverseDynamicsSolver(ID_model)
+
+    # Compute joint velocities and accelerations
+    s_speed = (s_angle[i+1] - s_angle[i]) / timed
+    s_alpha = ((s_angle[i+1] + s_angle[i-1]) - 2 * s_angle[i]) / (timed ** 2)
+
+    e_speed = (e_angle[i+1] - e_angle[i]) / timed
+    e_alpha = ((e_angle[i+1] + e_angle[i-1]) - 2 * e_angle[i]) / (timed ** 2)
+
+    # Get angles and velocities from the forward model's state
+    angle_elbow = main_model.getCoordinateSet().get('r_elbow_flex').getValue(state)
+    vel_elbow = main_model.getCoordinateSet().get('r_elbow_flex').getSpeedValue(state)
+
+    angle_shoulder = main_model.getCoordinateSet().get('r_shoulder_elev').getValue(state)
+    vel_shoulder = main_model.getCoordinateSet().get('r_shoulder_elev').getSpeedValue(state)
+
+    # Set angles and velocities in the inverse dynamics model's state
+    ID_model.getCoordinateSet().get('r_elbow_flex').setValue(ID_state, angle_elbow)
+    ID_model.getCoordinateSet().get('r_elbow_flex').setSpeedValue(ID_state, vel_elbow)
+
+    ID_model.getCoordinateSet().get('r_shoulder_elev').setValue(ID_state, angle_shoulder)
+    ID_model.getCoordinateSet().get('r_shoulder_elev').setSpeedValue(ID_state, vel_shoulder)
+
+    # PD error correction (helps stabilize inverse dynamics estimates)
+    kp, kv = 900, 60
+    e_err_acc = kp * (e_angle[i] - angle_elbow) + kv * (e_speed - vel_elbow)
+    s_err_acc = kp * (s_angle[i] - angle_shoulder) + kv * (s_speed - vel_shoulder)
+
+    e_alpha_corrected = e_alpha + e_err_acc
+    s_alpha_corrected = s_alpha + s_err_acc
+
+    # Create u_dot vector for ALL coordinates (shoulder first, then elbow)
+    coord_set = ID_model.getCoordinateSet()
+    num_coords = coord_set.getSize()
+    u_dot = osim.Vector(num_coords, 0.0)
+
+    # Map shoulder and elbow to their indices in the CoordinateSet
+    for j in range(num_coords):
+        coord_name = coord_set.get(j).getName()
+        if coord_name == 'r_shoulder_elev':
+            u_dot.set(j, float(s_alpha_corrected))
+        elif coord_name == 'r_elbow_flex':
+            u_dot.set(j, float(e_alpha_corrected))
+        else:
+            u_dot.set(j, 0.0)  # Zero acceleration for all other coordinates
+
+    # Compute torques using Inverse Dynamics
+    tau = ID.solve(ID_state, u_dot)
+
+    # Get torques by coordinate name (independent of order)
+    shoulder_tau = tau.get(coord_set.getIndex('r_shoulder_elev'))
+    elbow_tau = tau.get(coord_set.getIndex('r_elbow_flex'))
+
+    return [shoulder_tau, elbow_tau, e_alpha_corrected, e_alpha]
